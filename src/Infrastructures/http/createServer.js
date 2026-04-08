@@ -1,42 +1,38 @@
-import request from "supertest";
-import pool from "../../database/postgres/pool.js";
-import UsersTableTestHelper from "../../../../tests/UsersTableTestHelper.js";
-import container from "../../container.js";
-import createServer from "../createServer.js";
+import express from "express";
+import ClientError from "../../Commons/exceptions/ClientError.js";
+import DomainErrorTranslator from "../../Commons/exceptions/DomainErrorTranslator.js";
+import users from "../../Interfaces/http/api/users/index.js";
 
-describe("HTTP server", () => {
-  afterAll(async () => {
-    await pool.end();
+const createServer = async (container) => {
+  const app = express();
+
+  app.use(express.json());
+
+  app.use("/users", users(container));
+
+  app.get("/", (req, res) => {
+    res.status(200).json({ data: "Hello world!" });
   });
 
-  afterEach(async () => {
-    await UsersTableTestHelper.cleanTable();
-  });
+  app.use((err, req, res, next) => {
+    // eslint-disable-line no-unused-vars
+    const translatedError = DomainErrorTranslator.translate(err);
 
-  it("should response 404 when request unregistered route", async () => {
-    // Arrange
-    const app = await createServer({});
+    if (translatedError instanceof ClientError) {
+      res.status(translatedError.statusCode).json({
+        status: "fail",
+        message: translatedError.message,
+      });
+      return;
+    }
 
-    // Action
-    const response = await request(app).get("/unregisteredRoute");
-
-    // Assert
-    expect(response.status).toEqual(404);
-  });
-
-  describe("when GET /", () => {
-    it("should return 200 and hello world", async () => {
-      // Arrange
-      const app = await createServer({});
-
-      // Action
-      const response = await request(app).get("/");
-
-      // Assert
-      expect(response.status).toEqual(200);
-      expect(response.body.data).toEqual("Hello world!");
+    res.status(500).json({
+      status: "error",
+      message: "terjadi kegagalan pada server kami",
     });
   });
 
-  // Skenario testing lain ...
-});
+  return app;
+};
+
+export default createServer;
