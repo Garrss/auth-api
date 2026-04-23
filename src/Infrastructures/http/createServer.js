@@ -1,20 +1,17 @@
-import express from 'express';
-import ClientError from '../../Commons/exceptions/ClientError.js';
-import DomainErrorTranslator from '../../Commons/exceptions/DomainErrorTranslator.js';
-import users from '../../Interfaces/http/api/users/index.js';
+import express from "express";
+import ClientError from "../../Commons/exceptions/ClientError.js";
+import DomainErrorTranslator from "../../Commons/exceptions/DomainErrorTranslator.js";
+import users from "../../Interfaces/http/api/users/index.js";
 
 const createServer = async (container) => {
   const app = express();
 
   app.use(express.json());
 
-  app.use('/users', users(container));
+  app.use("/users", users(container));
 
-  app.use((req, res) => {
-    res.status(404).json({
-      status: 'fail',
-      message: 'resource not found',
-    });
+  app.get("/", (req, res) => {
+    res.status(200).json({ data: "Hello world!" });
   });
 
   app.use((err, req, res, next) => {
@@ -23,15 +20,15 @@ const createServer = async (container) => {
 
     if (translatedError instanceof ClientError) {
       res.status(translatedError.statusCode).json({
-        status: 'fail',
+        status: "fail",
         message: translatedError.message,
       });
       return;
     }
 
     res.status(500).json({
-      status: 'error',
-      message: 'terjadi kegagalan pada server kami',
+      status: "error",
+      message: "terjadi kegagalan pada server kami",
     });
   });
 
